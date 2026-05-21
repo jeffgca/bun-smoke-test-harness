@@ -15,7 +15,8 @@
 	"scripts": {
 		"cc": "bun ./scripts/build.ts",
 		"eslint": "eslint . --ext .ts --cache",
-		"chk": "tsc --noEmit"
+		"chk": "tsc --noEmit",
+		"compare:bun-versions": "bun ./scripts/compare-bun-versions.ts"
 	},
 	"peerDependencies": {
 		"typescript": "^5.9.3"
