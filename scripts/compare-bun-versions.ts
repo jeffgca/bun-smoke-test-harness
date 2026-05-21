@@ -306,29 +306,102 @@ const report = {
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────────
+const W = 52
+const SEP = `╠${'═'.repeat(W)}╣`
+const TOP = `╔${'═'.repeat(W)}╗`
+const BOT = `╚${'═'.repeat(W)}╝`
+
+function row(content: string): string {
+	const padded =
+		content.length <= W ? content.padEnd(W) : content.slice(0, W - 1) + '…'
+	return `║${padded}║`
+}
+
 console.log()
-console.log('╔══════════════════════════════════════════════════╗')
-console.log('║              Comparison Summary                  ║')
-console.log('╠══════════════════════════════════════════════════╣')
-console.log(`║  Stable version : ${stableResult.bunVersion.padEnd(30)}║`)
-console.log(`║  Canary version : ${canaryResult.bunVersion.padEnd(30)}║`)
+console.log(TOP)
+console.log(row('                 Comparison Summary'))
+console.log(SEP)
+console.log(row(`  Stable  v${stableResult.bunVersion}`))
 console.log(
-	`║  Stable exit    : ${String(stableResult.test.exitCode).padEnd(30)}║`,
+	row(
+		`    ✔ ${summary.stable.passCount} pass   ✖ ${summary.stable.failCount} fail   (${summary.stable.total} total)`,
+	),
 )
+console.log(row(`  Canary  v${canaryResult.bunVersion}`))
 console.log(
-	`║  Canary exit    : ${String(canaryResult.test.exitCode).padEnd(30)}║`,
+	row(
+		`    ✔ ${summary.canary.passCount} pass   ✖ ${summary.canary.failCount} fail   (${summary.canary.total} total)`,
+	),
 )
-console.log('╠══════════════════════════════════════════════════╣')
+console.log(SEP)
 
 if (summary.hasDifferences) {
-	console.log('║  Result : ✖  DIFFERENCES DETECTED               ║')
-	console.log('╠══════════════════════════════════════════════════╣')
-	for (const diff of summary.differences) {
-		console.log(`║  • ${diff.padEnd(46)}║`)
+	console.log(row('  Result : ✖  DIFFERENCES DETECTED'))
+
+	if (summary.regressions.length > 0) {
+		console.log(SEP)
+		console.log(
+			row(
+				`  Regressions (${summary.regressions.length}) — newly failing in canary:`,
+			),
+		)
+		for (const t of summary.regressions) {
+			console.log(row(`    • ${t}`))
+		}
 	}
-	console.log('╚══════════════════════════════════════════════════╝')
+
+	if (summary.improvements.length > 0) {
+		console.log(SEP)
+		console.log(
+			row(
+				`  Improvements (${summary.improvements.length}) — newly passing in canary:`,
+			),
+		)
+		for (const t of summary.improvements) {
+			console.log(row(`    • ${t}`))
+		}
+	}
+
+	if (summary.newFailures.length > 0) {
+		console.log(SEP)
+		console.log(
+			row(
+				`  New failures (${summary.newFailures.length}) — failing only in canary:`,
+			),
+		)
+		for (const t of summary.newFailures) {
+			console.log(row(`    • ${t}`))
+		}
+	}
+
+	if (summary.removedTests.length > 0) {
+		console.log(SEP)
+		console.log(
+			row(
+				`  Removed (${summary.removedTests.length}) — no longer present in canary:`,
+			),
+		)
+		for (const t of summary.removedTests) {
+			console.log(row(`    • ${t}`))
+		}
+	}
+
+	// No per-test data — show raw difference strings as fallback
+	if (
+		summary.regressions.length === 0 &&
+		summary.improvements.length === 0 &&
+		summary.newFailures.length === 0 &&
+		summary.removedTests.length === 0
+	) {
+		console.log(SEP)
+		for (const diff of summary.differences) {
+			console.log(row(`  • ${diff}`))
+		}
+	}
+
+	console.log(BOT)
 	process.exit(1)
 } else {
-	console.log('║  Result : ✔  No differences detected             ║')
-	console.log('╚══════════════════════════════════════════════════╝')
+	console.log(row('  Result : ✔  No differences detected'))
+	console.log(BOT)
 }

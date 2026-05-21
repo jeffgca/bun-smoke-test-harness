@@ -2,59 +2,85 @@ import { describe, expect, test } from 'bun:test'
 import { summarizeTestDifferences } from '../lib/bun-version-compare'
 
 describe('summarizeTestDifferences', () => {
-test('returns no differences when test outputs are effectively equal', () => {
-const stable = {
-label: 'stable',
-bunVersion: '1.2.0',
-test: {
-exitCode: 0,
-stdout: 'ok\n',
-stderr: '',
-},
-}
-const canary = {
-label: 'canary',
-bunVersion: '1.2.0',
-test: {
-exitCode: 0,
-stdout: 'ok\r\n',
-stderr: '',
-},
-}
+	test('returns no differences when test outputs are effectively equal', () => {
+		const stable = {
+			label: 'stable',
+			bunVersion: '1.2.0',
+			test: {
+				exitCode: 0,
+				stdout: 'ok\n',
+				stderr: '',
+			},
+		}
+		const canary = {
+			label: 'canary',
+			bunVersion: '1.2.0',
+			test: {
+				exitCode: 0,
+				stdout: 'ok\r\n',
+				stderr: '',
+			},
+		}
 
-expect(summarizeTestDifferences(stable, canary)).toEqual({
-hasDifferences: false,
-differences: [],
-})
-})
+		const emptyParsed = {
+			passing: [],
+			failing: [],
+			total: 0,
+			passCount: 0,
+			failCount: 0,
+		}
+		expect(summarizeTestDifferences(stable, canary)).toEqual({
+			hasDifferences: false,
+			differences: [],
+			stable: emptyParsed,
+			canary: emptyParsed,
+			regressions: [],
+			improvements: [],
+			newFailures: [],
+			removedTests: [],
+		})
+	})
 
-test('detects exit code and output differences', () => {
-const stable = {
-label: 'stable',
-bunVersion: '1.2.0',
-test: {
-exitCode: 0,
-stdout: 'passed',
-stderr: '',
-},
-}
-const canary = {
-label: 'canary',
-bunVersion: '1.3.0-canary.123',
-test: {
-exitCode: 1,
-stdout: 'failed',
-stderr: 'stack',
-},
-}
+	test('detects exit code and output differences', () => {
+		const stable = {
+			label: 'stable',
+			bunVersion: '1.2.0',
+			test: {
+				exitCode: 0,
+				stdout: 'passed',
+				stderr: '',
+			},
+		}
+		const canary = {
+			label: 'canary',
+			bunVersion: '1.3.0-canary.123',
+			test: {
+				exitCode: 1,
+				stdout: 'failed',
+				stderr: 'stack',
+			},
+		}
 
-expect(summarizeTestDifferences(stable, canary)).toEqual({
-hasDifferences: true,
-differences: [
-'Exit code differs (stable=0, canary=1)',
-'stdout differs',
-'stderr differs',
-],
-})
-})
+		const emptyParsed = {
+			passing: [],
+			failing: [],
+			total: 0,
+			passCount: 0,
+			failCount: 0,
+		}
+		expect(summarizeTestDifferences(stable, canary)).toEqual({
+			hasDifferences: true,
+			differences: [
+				'Exit code differs (stable=0, canary=1)',
+				'stdout differs',
+				'stderr differs',
+			],
+			stable: emptyParsed,
+			canary: emptyParsed,
+			regressions: [],
+			improvements: [],
+			newFailures: [],
+			removedTests: [],
+		})
+	})
 })
