@@ -39,12 +39,6 @@ if (normalizeOutput(stable.test.stderr) !== normalizeOutput(canary.test.stderr))
 differences.push('stderr differs')
 }
 
-if (stable.bunVersion !== canary.bunVersion) {
-differences.push(
-`Bun versions differ (stable=${stable.bunVersion}, canary=${canary.bunVersion})`,
-)
-}
-
 return {
 hasDifferences: differences.length > 0,
 differences,

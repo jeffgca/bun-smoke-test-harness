@@ -54,7 +54,6 @@ differences: [
 'Exit code differs (stable=0, canary=1)',
 'stdout differs',
 'stderr differs',
-'Bun versions differ (stable=1.2.0, canary=1.3.0-canary.123)',
 ],
 })
 })

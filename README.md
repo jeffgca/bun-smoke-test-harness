@@ -36,7 +36,7 @@ bun run compare:bun-versions
 
 This will:
 - install stable Bun into `.bun-compare-workspace/bun-stable`
-- install canary Bun into `.bun-compare-workspace/bun-canary` by installing stable first, then running `bun upgrade --canary`
+- install canary Bun into `.bun-compare-workspace/bun-canary` by running `bun upgrade --canary` with the stable Bun binary
 - clone (or update) `https://github.com/jeffgca/bun-functional-tests.git`
 - run install + tests for each Bun binary
 - write a JSON comparison report to `.bun-compare-workspace/comparison-report.json`

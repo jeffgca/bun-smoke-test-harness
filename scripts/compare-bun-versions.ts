@@ -137,12 +137,11 @@ ensureSuccess('install stable bun', installResult)
 return resolveBunBinary(targetDir)
 }
 
-function installCanaryBun(targetDir: string): string {
-const stableBinary = installStableBun(targetDir)
+function installCanaryBun(targetDir: string, bootstrapBinary: string): string {
 const bunInstallDir = join(targetDir, '.bun')
 mkdirSync(bunInstallDir, { recursive: true })
 
-const upgradeResult = runCommand([stableBinary, 'upgrade', '--canary'], workspace, {
+const upgradeResult = runCommand([bootstrapBinary, 'upgrade', '--canary'], workspace, {
 BUN_INSTALL: bunInstallDir,
 })
 ensureSuccess('upgrade bun to canary', upgradeResult)
@@ -208,7 +207,7 @@ console.log(`Functional tests directory: ${testsDir}`)
 prepareFunctionalTests(argv.testsRepo, testsDir)
 
 const stableBinary = installStableBun(stableDir)
-const canaryBinary = installCanaryBun(canaryDir)
+const canaryBinary = installCanaryBun(canaryDir, stableBinary)
 
 const stableResult = runFunctionalTests('stable', stableBinary, join(stableDir, '.bun'))
 const canaryResult = runFunctionalTests('canary', canaryBinary, join(canaryDir, '.bun'))
