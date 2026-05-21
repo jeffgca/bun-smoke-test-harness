@@ -1,0 +1,116 @@
+name: Build & Verify Binaries
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    name: Build + Version Check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-x64
+            target: bun-linux-x64
+            triple: x86_64-unknown-linux-gnu
+            shell: bash
+          - os: macos-15-intel
+            label: macos-x86_64
+            target: bun-darwin-x64
+            triple: x86_64-apple-darwin
+            shell: bash
+          - os: macos-14
+            label: macos-arm64
+            target: bun-darwin-arm64
+            triple: aarch64-apple-darwin
+            shell: bash
+          - os: windows-latest
+            label: windows-x86_64
+            target: bun-windows-x64
+            triple: x86_64-pc-windows-msvc
+            shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Show Bun & Node versions
+        run: |
+          bun --version
+          node --version
+
+      - name: Build matched binary (clean dist)
+        run: |
+          bun ./scripts/build.ts --target ${{ matrix.target }}
+        shell: bash
+
+      - name: List dist contents
+        run: ls -l dist
+        shell: bash
+
+      - name: Determine expected version
+        id: pkg
+        run: echo "version=$(bun ./scripts/get-version.ts)" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Get binary path
+        id: binary_path
+        run: |
+          echo "binary=$(bun ./scripts/get-build-file.ts --target=${{matrix.label}})" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Make executable (non-Windows)
+        if: ${{ matrix.shell == 'bash' }}
+        run: chmod +x "${{ steps.binary_path.outputs.binary }}"
+        shell: bash
+
+      - name: Verify matched binary prints version (Unix)
+        if: ${{ matrix.shell == 'bash' }}
+        run: |
+          set -euo pipefail
+          EXPECTED="${{ steps.pkg.outputs.version }}"
+          echo "Expected version: $EXPECTED"
+          echo "Testing ${{ steps.binary_path.outputs.binary }} --version"
+          out="$("${{ steps.binary_path.outputs.binary }}" --version)"
+          echo "Output: $out"
+          if [[ "$out" != "$EXPECTED" ]]; then
+            echo "Version mismatch (got '$out')" >&2
+            exit 1
+          fi
+        shell: bash
+
+      - name: Verify matched binary prints version (Windows)
+        if: ${{ matrix.shell == 'pwsh' }}
+        run: |
+          $Expected = "${{ steps.pkg.outputs.version }}"
+          Write-Host "Expected version: $Expected"
+          $Binary = "${{ steps.binary_path.outputs.binary }}"
+          Write-Host "Testing $Binary --version"
+          $Out = & .\$Binary --version
+          Write-Host "Output: $Out"
+          if ($Out -ne $Expected) {
+            Write-Error "Version mismatch (got '$Out')"
+            exit 1
+          }
+        shell: pwsh
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sidecar-${{ matrix.label }}
+          path: ${{ steps.binary_path.outputs.binary }}
+          if-no-files-found: error

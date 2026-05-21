@@ -1,0 +1,36 @@
+{
+	"name": "bun",
+	"module": "index.ts",
+	"type": "module",
+	"private": true,
+	"version": "0.0.1",
+	"devDependencies": {
+		"@types/bun": "latest",
+		"eslint": "^9.39.4",
+		"globals": "^16.5.0",
+		"jiti": "^2.6.1",
+		"prettier": "^3.8.3",
+		"typescript-eslint": "^8.59.1"
+	},
+	"scripts": {
+		"cc": "bun ./scripts/build.ts",
+		"eslint": "eslint . --ext .ts --cache",
+		"chk": "tsc --noEmit"
+	},
+	"peerDependencies": {
+		"typescript": "^5.9.3"
+	},
+	"appConfig": {
+		"appBaseName": "clowncar",
+		"appTargets": [
+			"bun-darwin-x64",
+			"bun-darwin-arm64",
+			"bun-linux-x64",
+			"bun-windows-x64"
+		]
+	},
+	"dependencies": {
+		"@types/yargs": "^17.0.35",
+		"yargs": "^18.0.0"
+	}
+}
