@@ -141,7 +141,7 @@ function installCanaryBun(targetDir: string, bootstrapBinary: string): string {
 const bunInstallDir = join(targetDir, '.bun')
 mkdirSync(bunInstallDir, { recursive: true })
 
-const upgradeResult = runCommand([bootstrapBinary, 'upgrade', '--canary'], workspace, {
+const upgradeResult = runCommand([bootstrapBinary, 'upgrade', '--canary'], bunInstallDir, {
 BUN_INSTALL: bunInstallDir,
 })
 ensureSuccess('upgrade bun to canary', upgradeResult)
@@ -175,21 +175,16 @@ ensureSuccess('clone bun-functional-tests', cloneResult)
 function runFunctionalTests(
 label: string,
 bunBinary: string,
-bunInstallDir: string,
+bunInstallDir?: string,
 ): BunTestRunResult {
-const versionResult = runCommand([bunBinary, '--version'], testsDir, {
-BUN_INSTALL: bunInstallDir,
-})
+const env = bunInstallDir ? { BUN_INSTALL: bunInstallDir } : undefined
+const versionResult = runCommand([bunBinary, '--version'], testsDir, env)
 ensureSuccess(`${label} bun version`, versionResult)
 
-const installResult = runCommand([bunBinary, ...argv.installArg], testsDir, {
-BUN_INSTALL: bunInstallDir,
-})
+const installResult = runCommand([bunBinary, ...argv.installArg], testsDir, env)
 ensureSuccess(`${label} test dependencies install`, installResult)
 
-const testResult = runCommand([bunBinary, ...argv.testArg], testsDir, {
-BUN_INSTALL: bunInstallDir,
-})
+const testResult = runCommand([bunBinary, ...argv.testArg], testsDir, env)
 
 return {
 label,
@@ -209,7 +204,7 @@ prepareFunctionalTests(argv.testsRepo, testsDir)
 const stableBinary = installStableBun(stableDir)
 const canaryBinary = installCanaryBun(canaryDir, stableBinary)
 
-const stableResult = runFunctionalTests('stable', stableBinary, join(stableDir, '.bun'))
+const stableResult = runFunctionalTests('stable', stableBinary)
 const canaryResult = runFunctionalTests('canary', canaryBinary, join(canaryDir, '.bun'))
 
 const summary = summarizeTestDifferences(stableResult, canaryResult)
