@@ -4,6 +4,7 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
+import { createSpinner } from 'nanospinner'
 import {
 	summarizeTestDifferences,
 	type BunTestRunResult,
@@ -207,17 +208,81 @@ function runFunctionalTests(
 const stableDir = join(workspace, 'bun-stable')
 const canaryDir = join(workspace, 'bun-canary')
 
-console.log(`Workspace: ${workspace}`)
-console.log(`Functional tests directory: ${testsDir}`)
+console.log(`Workspace:              ${workspace}`)
+console.log(`Functional tests dir:   ${testsDir}`)
+console.log()
 
-prepareFunctionalTests(argv.testsRepo, testsDir)
+// ── Step 1: prepare functional tests ─────────────────────────────────────────
+{
+	const spinner = createSpinner('Preparing functional tests…').start()
+	try {
+		prepareFunctionalTests(argv.testsRepo, testsDir)
+		spinner.success({ text: 'Functional tests ready' })
+	} catch (err) {
+		spinner.error({ text: `Failed to prepare functional tests: ${err}` })
+		process.exit(1)
+	}
+}
 
-const stableBinary = installStableBun(stableDir)
-const canaryBinary = installCanaryBun(canaryDir)
+// ── Step 2: install stable Bun ────────────────────────────────────────────────
+let stableBinary: string
+{
+	const spinner = createSpinner('Installing stable Bun…').start()
+	try {
+		stableBinary = installStableBun(stableDir)
+		spinner.success({ text: 'Stable Bun installed' })
+	} catch (err) {
+		spinner.error({ text: `Failed to install stable Bun: ${err}` })
+		process.exit(1)
+	}
+}
 
-const stableResult = runFunctionalTests('stable', stableBinary)
-const canaryResult = runFunctionalTests('canary', canaryBinary)
+// ── Step 3: install canary Bun ────────────────────────────────────────────────
+let canaryBinary: string
+{
+	const spinner = createSpinner('Installing canary Bun…').start()
+	try {
+		canaryBinary = installCanaryBun(canaryDir)
+		spinner.success({ text: 'Canary Bun installed' })
+	} catch (err) {
+		spinner.error({ text: `Failed to install canary Bun: ${err}` })
+		process.exit(1)
+	}
+}
 
+// ── Step 4: run stable tests ──────────────────────────────────────────────────
+let stableResult: BunTestRunResult
+{
+	const spinner = createSpinner('Running functional tests (stable)…').start()
+	try {
+		stableResult = runFunctionalTests('stable', stableBinary)
+		const icon = stableResult.test.exitCode === 0 ? '✔' : '✖'
+		spinner.success({
+			text: `Stable tests complete  ${icon}  (exit ${stableResult.test.exitCode}, v${stableResult.bunVersion})`,
+		})
+	} catch (err) {
+		spinner.error({ text: `Stable tests threw: ${err}` })
+		process.exit(1)
+	}
+}
+
+// ── Step 5: run canary tests ──────────────────────────────────────────────────
+let canaryResult: BunTestRunResult
+{
+	const spinner = createSpinner('Running functional tests (canary)…').start()
+	try {
+		canaryResult = runFunctionalTests('canary', canaryBinary)
+		const icon = canaryResult.test.exitCode === 0 ? '✔' : '✖'
+		spinner.success({
+			text: `Canary tests complete  ${icon}  (exit ${canaryResult.test.exitCode}, v${canaryResult.bunVersion})`,
+		})
+	} catch (err) {
+		spinner.error({ text: `Canary tests threw: ${err}` })
+		process.exit(1)
+	}
+}
+
+// ── Step 6: write report ──────────────────────────────────────────────────────
 const summary = summarizeTestDifferences(stableResult, canaryResult)
 const report = {
 	generatedAt: new Date().toISOString(),
@@ -228,22 +293,42 @@ const report = {
 	summary,
 }
 
-mkdirSync(dirname(reportFile), { recursive: true })
-writeFileSync(reportFile, JSON.stringify(report, null, 2) + '\n', 'utf8')
-
-console.log(`Stable Bun version: ${stableResult.bunVersion}`)
-console.log(`Canary Bun version: ${canaryResult.bunVersion}`)
-console.log(`Stable test exit code: ${stableResult.test.exitCode}`)
-console.log(`Canary test exit code: ${canaryResult.test.exitCode}`)
-
-if (summary.hasDifferences) {
-	console.log('Differences detected:')
-	for (const diff of summary.differences) {
-		console.log(`- ${diff}`)
+{
+	const spinner = createSpinner('Writing comparison report…').start()
+	try {
+		mkdirSync(dirname(reportFile), { recursive: true })
+		writeFileSync(reportFile, JSON.stringify(report, null, 2) + '\n', 'utf8')
+		spinner.success({ text: `Report written → ${reportFile}` })
+	} catch (err) {
+		spinner.error({ text: `Failed to write report: ${err}` })
+		process.exit(1)
 	}
-	console.log(`Full report written to ${reportFile}`)
-	process.exit(1)
 }
 
-console.log('No differences detected between stable and canary test results.')
-console.log(`Full report written to ${reportFile}`)
+// ── Summary ───────────────────────────────────────────────────────────────────
+console.log()
+console.log('╔══════════════════════════════════════════════════╗')
+console.log('║              Comparison Summary                  ║')
+console.log('╠══════════════════════════════════════════════════╣')
+console.log(`║  Stable version : ${stableResult.bunVersion.padEnd(30)}║`)
+console.log(`║  Canary version : ${canaryResult.bunVersion.padEnd(30)}║`)
+console.log(
+	`║  Stable exit    : ${String(stableResult.test.exitCode).padEnd(30)}║`,
+)
+console.log(
+	`║  Canary exit    : ${String(canaryResult.test.exitCode).padEnd(30)}║`,
+)
+console.log('╠══════════════════════════════════════════════════╣')
+
+if (summary.hasDifferences) {
+	console.log('║  Result : ✖  DIFFERENCES DETECTED               ║')
+	console.log('╠══════════════════════════════════════════════════╣')
+	for (const diff of summary.differences) {
+		console.log(`║  • ${diff.padEnd(46)}║`)
+	}
+	console.log('╚══════════════════════════════════════════════════╝')
+	process.exit(1)
+} else {
+	console.log('║  Result : ✔  No differences detected             ║')
+	console.log('╚══════════════════════════════════════════════════╝')
+}
