@@ -108,9 +108,9 @@ jobs:
           }
         shell: pwsh
 
-      - name: Upload dist artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: sidecar-${{ matrix.label }}
-          path: ${{ steps.binary_path.outputs.binary }}
-          if-no-files-found: error
+      # - name: Upload dist artifacts
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: sidecar-${{ matrix.label }}
+      #     path: ${{ steps.binary_path.outputs.binary }}
+      #     if-no-files-found: error
